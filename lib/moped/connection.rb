@@ -211,7 +211,13 @@ module Moped
       #
       # @since 1.2.0
       def read(length)
-        handle_socket_errors { super }
+        msg = ''
+        handle_socket_errors do
+          while msg.length < length
+            msg << super(length - msg.length)
+          end
+        end
+        msg
       end
 
       # Write to the socket.
@@ -224,9 +230,16 @@ module Moped
       # @return [ Integer ] The number of bytes written.
       #
       # @since 1.0.0
-      def write(*args)
+      def write(buffer)
         raise Errors::ConnectionFailure, "Socket connection was closed by remote host" unless alive?
-        handle_socket_errors { super }
+
+        written = 0
+        handle_socket_errors do
+          while written < buffer.length
+            written += super(buffer[written..-1])
+          end
+        end
+        written
       end
 
       private
